@@ -2231,12 +2231,15 @@ void item::ammo_info( std::vector<iteminfo> &info, const iteminfo_query *parts, 
                               has_armor_mult ) ? iteminfo::no_newline : iteminfo::no_flags;
         iteminfo::flags fd = ( has_flat_arpen ||
                                has_armor_mult ) ? iteminfo::no_newline | iteminfo::is_decimal : iteminfo::is_decimal;
+        const auto ammo_damage = ammo.damage.total_damage();
+        const auto ammo_damage_flags = ammo_damage != std::trunc( ammo_damage ) ?
+                                       iteminfo::is_decimal : iteminfo::no_flags;
 
         if( has_flat_dmg && has_dmg_multiplier
             && has_dmg_multiplier && display_dmg_multiplier ) {
             if( ammo.shot ) {
                 info.emplace_back( "AMMO", _( "Damage: " ), "",
-                                   iteminfo::no_newline, ammo.damage.total_damage() );
+                                   iteminfo::no_newline | ammo_damage_flags, ammo_damage );
                 info.emplace_back( "AMMO", "x", "",
                                    fd,
                                    ammo.shot->count );
@@ -2245,7 +2248,7 @@ void item::ammo_info( std::vector<iteminfo> &info, const iteminfo_query *parts, 
                                    ammo.damage.damage_units.front().damage_multiplier );
             } else {
                 info.emplace_back( "AMMO", _( "Damage: " ), "",
-                                   iteminfo::no_newline, ammo.damage.total_damage() );
+                                   iteminfo::no_newline | ammo_damage_flags, ammo_damage );
                 info.emplace_back( "AMMO", "/", "",
                                    fd,
                                    ammo.damage.damage_units.front().damage_multiplier );
@@ -2258,13 +2261,13 @@ void item::ammo_info( std::vector<iteminfo> &info, const iteminfo_query *parts, 
         } else if( display_flat_dmg && has_flat_dmg ) {
             if( ammo.shot ) {
                 info.emplace_back( "AMMO", _( "Damage: " ), "",
-                                   iteminfo::no_newline, ammo.damage.total_damage() );
+                                   iteminfo::no_newline | ammo_damage_flags, ammo_damage );
                 info.emplace_back( "AMMO", "x", "",
                                    f,
                                    ammo.shot->count );
             } else {
                 info.emplace_back( "AMMO", _( "Damage: " ), "",
-                                   f, ammo.damage.total_damage() );
+                                   f | ammo_damage_flags, ammo_damage );
             }
         } else {
             didnt_print_dmg = true;
@@ -2414,22 +2417,27 @@ void item::gun_info( const item *mod, std::vector<iteminfo> &info, const iteminf
         if( parts->test( iteminfo_parts::GUN_DAMAGE_LOADEDAMMO ) ) {
             assert( curammo ); // Appease clang-tidy
             damage_instance ammo_dam = curammo->ammo->damage;
+            const auto loaded_ammo_damage = std::max( ammo_du.amount, thrown_du.amount );
+            const auto loaded_ammo_damage_flags = loaded_ammo_damage != std::trunc( loaded_ammo_damage ) ?
+                                                  iteminfo::is_decimal : iteminfo::no_flags;
             info.emplace_back( "GUN", "ammo_damage", "",
                                iteminfo::no_newline | iteminfo::no_name |
-                               iteminfo::show_plus, std::max( ammo_du.amount, thrown_du.amount ) );
+                               iteminfo::show_plus | loaded_ammo_damage_flags, loaded_ammo_damage );
         }
 
         if( parts->test( iteminfo_parts::GUN_DAMAGE_TOTAL ) ) {
             // Intentionally not using total_damage() as it applies multipliers
-            int total_damage = gun_du.amount + std::max( ammo_du.amount, thrown_du.amount );
+            const auto total_damage = gun_du.amount + std::max( ammo_du.amount, thrown_du.amount );
             // Apply enchantment bonuses to damage display
-            int base_bullet_damage = static_cast<int>( total_damage );
-            int ench_damage_bonus = viewer.bonus_from_enchantments( base_bullet_damage,
-                                    enchantment_value_id( "RANGED_DAMAGE_" + gun_du.get_internal_name() ), true );
-            int displayed_damage = total_damage + ench_damage_bonus;
+            const auto base_bullet_damage = static_cast<int>( total_damage );
+            const auto ench_damage_bonus = viewer.bonus_from_enchantments( base_bullet_damage,
+                                          enchantment_value_id( "RANGED_DAMAGE_" + gun_du.get_internal_name() ), true );
+            const auto displayed_damage = total_damage + ench_damage_bonus;
+            const auto damage_flags = displayed_damage != std::trunc( displayed_damage ) ?
+                                      iteminfo::is_decimal : iteminfo::no_flags;
 
             info.emplace_back( "GUN", "sum_of_damage", _( " = <num>" ),
-                               iteminfo::no_newline | iteminfo::no_name,
+                               iteminfo::no_newline | iteminfo::no_name | damage_flags,
                                displayed_damage );
             if( curammo != nullptr && curammo->ammo->shot ) {
                 info.emplace_back( "GUN", "x", "",

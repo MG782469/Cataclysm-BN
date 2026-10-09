@@ -739,6 +739,15 @@ TEST_CASE("ranged weapon attributes", "[item][iteminfo][weapon][ranged][gun]") {
             "= <color_c_yellow>0.75</color>\n");
     }
 
+    SECTION("weapon damage with fractional ammo") {
+        iteminfo_query q = q_vec(
+            {iteminfo_parts::GUN_DAMAGE_LOADEDAMMO, iteminfo_parts::GUN_DAMAGE_TOTAL});
+        detached_ptr<item> rifle = item::spawn("fn_fal");
+        rifle->ammo_set(itype_id("bp_762_51"));
+        test_info_contains(
+            *rifle, q, "<color_c_yellow>+38.40</color> = <color_c_yellow>37.40</color>");
+    }
+
     SECTION("time to reload weapon") {
         iteminfo_query q = q_vec({iteminfo_parts::GUN_RELOAD_TIME});
         test_info_equals(
@@ -789,6 +798,10 @@ TEST_CASE("ammunition", "[item][iteminfo][ammo]") {
             "<color_c_white>Ammunition type</color>: rocks\n"
             "Damage: <color_c_yellow>7</color>\n"
             "Range: <color_c_yellow>10</color>  Dispersion: <color_c_yellow>14</color>\n");
+    }
+
+    SECTION("fractional ammo damage") {
+        test_info_contains(*item::spawn_temporary("bp_762_51"), q, "Damage: <color_c_yellow>38.40</color>");
     }
 }
 
